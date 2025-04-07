@@ -36,6 +36,118 @@ module sort_floats_using_fsm (
     // The FLEN parameter is defined in the "import/preprocessed/cvw/config-shared.vh" file
     // and usually equal to the bit width of the double-precision floating-point number, FP64, 64 bits.
 
+    enum logic [2:0] {
+        IDLE, 
+        LOAD, 
+        COMP1, 
+        COMP2, 
+        COMP3, 
+        DONE
+    } state, next_state;
+
+    always_ff @(posedge clk) 
+    begin
+        if (rst)
+            state <= IDLE;
+        else
+            state <= next_state;
+    end
+
+    logic err1, err2, err3;
+
+    always_comb begin
+        next_state = state;
+
+        case (state)
+            IDLE:  
+                if (valid_in) 
+                    next_state = LOAD;
+            LOAD:  
+                next_state = COMP1;
+            COMP1: 
+                next_state = COMP2;
+            COMP2: 
+                next_state = COMP3;
+            COMP3: 
+                next_state = DONE;
+            DONE:  
+                next_state = IDLE;
+        endcase
+    end
+
+    always_ff @(posedge clk) begin
+        if (rst) 
+        begin
+            valid_out <= 0;
+            err1 <= 0;
+            err2 <= 0;
+            err3 <= 0;
+        end 
+
+        else 
+        begin
+            case (state)
+                LOAD:
+                    sorted <= unsorted;
+
+                COMP1: 
+                begin
+                    f_le_a <= sorted[0];
+                    f_le_b <= sorted[1];
+
+                    if (!f_le_res) 
+                    begin
+                        sorted[0] <= sorted[1];
+                        sorted[1] <= sorted[0];
+                    end
+
+                    if (f_le_err)
+                        err1 <= 1;
+                end
+
+                COMP2: 
+                begin
+                    f_le_a <= sorted[1];
+                    f_le_b <= sorted[2];
+
+                    if (!f_le_res) 
+                    begin
+                        sorted[1] <= sorted[2];
+                        sorted[2] <= sorted[1];
+                    end
+
+                    if (f_le_err)
+                        err2 <= 1;
+                end
+
+                COMP3: 
+                begin
+                    f_le_a <= sorted[0];
+                    f_le_b <= sorted[1];
+
+                    if (!f_le_res) 
+                    begin
+                        sorted[0] <= sorted[1];
+                        sorted[1] <= sorted[0];
+                    end
+
+                    if (f_le_err)
+                        err3 <= 1;
+                end
+
+                DONE: 
+                begin
+                    if (f_le_err)
+                        err3 <= 1;
+                    valid_out <= 1;
+                end
+            endcase
+        end
+    end
+
+    assign busy = (state != IDLE) && (state != DONE);
+
+    assign err = err1 | err2 | err3;
 
 
 endmodule
