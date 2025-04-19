@@ -12,8 +12,8 @@ module sqrt_formula_distributor
     input  [31:0] b,
     input  [31:0] c,
 
-    output        res_vld,
-    output [31:0] res
+    output logic        res_vld,
+    output logic [31:0] res
 );
 
     // Task:
@@ -43,5 +43,69 @@ module sqrt_formula_distributor
     // Instantiate sufficient number of "formula_1_impl_1_top", "formula_1_impl_2_top",
     // or "formula_2_top" modules to achieve desired performance.
 
+    localparam N = (formula == 1) ? 13 : 13;
+    
+    logic [31:0] in_a   [N];
+    logic [31:0] in_b   [N];
+    logic [31:0] in_c   [N];
+    logic        in_vld [N];
+
+    logic [31:0] out_res [N];
+    logic        out_vld [N];
+
+    logic [7:0] cnt;
+
+    always_ff @ (posedge clk) begin
+        if (rst) begin
+            cnt <= '0;
+        end
+
+        if(cnt ==  N - 1)
+            cnt <= 0;
+        else
+            cnt++;
+    end
+    
+    always_comb begin
+        for (int i = 0; i < N; i++)
+            in_vld[i] = '0;
+
+        in_a  [cnt] = a;
+        in_b  [cnt] = b;
+        in_c  [cnt] = c;
+        in_vld[cnt] = arg_vld;   
+
+        res     = out_res[cnt];
+        res_vld = out_vld[cnt];
+    end
+
+
+    generate
+        genvar i;
+        if (formula == 1)
+            for (i = 0; i < N; i++)
+                formula_1_impl_1_top f1(
+                    .clk(clk),
+                    .rst(rst),
+                    .a(in_a[i]),
+                    .b(in_b[i]),
+                    .c(in_c[i]),
+                    .arg_vld(in_vld[i]),
+                    .res_vld(out_vld[i]),
+                    .res(out_res[i]));
+
+        else if (formula == 2)
+            for (i = 0; i < N; i++)
+                formula_2_top f2(
+                    .clk(clk),
+                    .rst(rst),
+                    .a(in_a[i]),
+                    .b(in_b[i]),
+                    .c(in_c[i]),
+                    .arg_vld(in_vld[i]),
+                    .res_vld(out_vld[i]),
+                    .res(out_res[i]));
+
+    endgenerate
 
 endmodule
