@@ -32,5 +32,17 @@ module mux_4_1
   // Using code for mux_2_1 as an example,
   // write code for 4:1 mux using the "if" statement
 
+  always_comb
+  begin
+    if (sel == 2'b11)
+      y = d3;
+    if (sel == 2'b01)
+      y = d1;
+    if (sel == 2'b10)
+      y = d2;
+    if (sel == 2'b00)
+      y = d0;
+  end
+
 
 endmodule

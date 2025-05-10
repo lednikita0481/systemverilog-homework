@@ -42,5 +42,43 @@ module formula_1_pipe
     // FPGA-Systems Magazine :: FSM :: Issue ALFA (state_0)
     // You can download this issue from https://fpga-systems.ru/fsm#state_0
 
+    logic isqrt_vld_a, isqrt_vld_b, isqrt_vld_c;
+    logic [31:0] isqrt_a;
+    logic [31:0] isqrt_b;
+    logic [31:0] isqrt_c;
+
+    isqrt dd_isqrt_a
+    (
+        .clk    (clk),
+        .rst    (rst),
+        .x_vld  (arg_vld),
+        .x      (a),
+        .y_vld  (isqrt_vld_a),
+        .y      (isqrt_a)
+    );
+
+    isqrt dd_isqrt_b
+    (
+        .clk    (clk),
+        .rst    (rst),
+        .x_vld  (arg_vld),
+        .x      (b),
+        .y_vld  (isqrt_vld_b),
+        .y      (isqrt_b)
+    );
+    
+    isqrt dd_isqrt_c
+    (
+        .clk    (clk),
+        .rst    (rst),
+        .x_vld  (arg_vld),
+        .x      (c),
+        .y_vld  (isqrt_vld_c),
+        .y      (isqrt_c)
+    );
+
+    assign res_vld = (isqrt_vld_a) ? 1'b1 : 1'b0;
+    assign res     = (isqrt_vld_a) ? isqrt_a + isqrt_b + isqrt_c : res;
+
 
 endmodule

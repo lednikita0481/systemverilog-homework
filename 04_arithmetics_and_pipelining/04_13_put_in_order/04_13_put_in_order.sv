@@ -31,4 +31,38 @@ module put_in_order
     // from Homework 2, but here block should also preserve the output order.
 
 
+    logic [width-1:0]  data_buffer [n_inputs-1:0];
+    logic [n_inputs-1:0] valid_buffer; 
+
+    logic [$clog2(n_inputs)-1:0] current_idx;
+
+    logic [n_inputs-1:0] next_valid_buffer;
+    assign next_valid_buffer = valid_buffer & ~(1 << current_idx);
+
+    always_ff @(posedge clk or posedge rst) begin
+        if (rst) begin
+            current_idx   <= '0;
+            valid_buffer  <= '0;
+        end else begin
+            if (valid_buffer[current_idx]) begin
+                if (current_idx == n_inputs-1)
+                    current_idx <= 0;
+                else
+                    current_idx <= current_idx + 1;
+            end
+
+            valid_buffer <= (valid_buffer & ~(1 << current_idx)) 
+                          | (next_valid_buffer & up_vlds) 
+                          | up_vlds;
+
+            for (int i = 0; i < n_inputs; i++) begin
+                if (!next_valid_buffer[i] && up_vlds[i]) begin
+                    data_buffer[i] <= up_data[i];
+                end
+            end
+        end
+    end
+
+    assign down_vld  = valid_buffer[current_idx];
+    assign down_data = data_buffer[current_idx];
 endmodule

@@ -61,5 +61,94 @@ module formula_1_pipe_aware_fsm
     // FPGA-Systems Magazine :: FSM :: Issue ALFA (state_0)
     // You can download this issue from https://fpga-systems.ru/fsm#state_0
 
+    // Состояния FSM
+    typedef enum logic [2:0] {
+        IDLE,       
+        SEND_A,     
+        SEND_B,     
+        SEND_C,     
+        COLLECT,    
+        OUTPUT      
+    } state_t;
+
+    state_t state, next_state;
+
+    logic [31:0] sqrt_a, sqrt_b; 
+    logic [1:0] collect_count;   
+
+    always_comb begin
+        next_state = state;
+        isqrt_x_vld = 1'b0;
+        isqrt_x = 32'b0;
+        res_vld = 1'b0;
+
+        case (state)
+            IDLE: begin
+                if (arg_vld) begin
+                    next_state = SEND_A;
+                    isqrt_x_vld = 1'b1;
+                    isqrt_x = a;
+                end
+            end
+
+            SEND_A: begin
+                next_state = SEND_B;
+                isqrt_x_vld = 1'b1;
+                isqrt_x = b;
+            end
+
+            SEND_B: begin
+                next_state = SEND_C;
+                isqrt_x_vld = 1'b1;
+                isqrt_x = c;
+            end
+
+            SEND_C: begin
+                next_state = COLLECT;
+            end
+
+            COLLECT: begin
+                if (isqrt_y_vld && collect_count == 2) begin
+                    next_state = OUTPUT;
+                end
+            end
+
+            OUTPUT: begin
+                res_vld = 1'b1;
+                next_state = IDLE;
+            end
+
+            default: next_state = IDLE;
+        endcase
+    end
+
+    always_ff @(posedge clk) 
+    begin
+        if (rst) begin
+            state <= IDLE;
+            sqrt_a <= 32'b0;
+            sqrt_b <= 32'b0;
+            collect_count <= 2'b0;
+            res <= 32'b0;
+        end 
+        else begin
+            state <= next_state;
+
+            if (isqrt_y_vld) begin
+                case (collect_count)
+                    2'd0: sqrt_a <= {16'b0, isqrt_y}; // isqrt(a)
+                    2'd1: sqrt_b <= {16'b0, isqrt_y}; // isqrt(b)
+                    2'd2: res <= sqrt_a + sqrt_b + {16'b0, isqrt_y}; // isqrt(a) + isqrt(b) + isqrt(c)
+                endcase
+
+                collect_count <= collect_count + 1;
+            end
+
+            if (state == OUTPUT) begin
+                collect_count <= 2'b0;
+            end
+        end
+    end
+
 
 endmodule
